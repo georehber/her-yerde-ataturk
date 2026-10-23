@@ -1,0 +1,42 @@
+/*
+ * GeoRehber marka değişkenleri
+ * Kaynak: https://georehber.com/css/style.css?v=20260715-5 ve https://geodata.georehber.com/style.css?v=31
+ * (indirilen kopyalar: data/ref/marka/). İki site aynı değerleri kullanıyor. Renkler kaynakta oklch;
+ * buradaki hex değerleri o oklch değerlerinden hesaplandı (parantez içinde kaynak değişken).
+ * Logo: https://geodata.georehber.com/icons/logo.png (Slogan bu sayfada kullanılmaz: konu hassas, başlığın yanında ticari slogan olmaz.)
+ */
+/* Yazı tipleri (Geist, Inter) her sayfanın <head> bölümünde doğrudan yüklenir; @import zinciri yavaşlatıyordu. */
+
+:root {
+  /* Renkler */
+  --gr-ana: #003286;          /* --primary / --lacivert: oklch(0.35 0.15 260) */
+  --gr-ana-koyu: #002362;     /* --lacivert-koyu: oklch(0.28 0.12 260) */
+  --gr-ana-zemin: #e3efff;    /* --lacivert-zemin: oklch(0.95 0.03 260) */
+  --gr-aksan: #11ad00;        /* --accent / --yesil: oklch(0.65 0.22 142) */
+  --gr-aksan-koyu: #008100;   /* --yesil-koyu: oklch(0.52 0.19 142) */
+  --gr-aksan-zemin: #dcf8d9;  /* --yesil-zemin: oklch(0.95 0.05 142) */
+  --gr-zemin: #fcfcfc;        /* --background / --zemin: oklch(0.99 0 0) */
+  --gr-kart: #ffffff;         /* --card / --kart: oklch(1 0 0) */
+  --gr-sessiz: #f1edee;       /* --muted / --sessiz: oklch(0.95 0.005 0) */
+  --gr-ikincil: #e1e5eb;      /* --secondary / --ikincil: oklch(0.92 0.01 260) */
+  --gr-kenarlik: #e4e4e7;     /* --border / --kenarlik: oklch(0.92 0.004 286.32) */
+  --gr-metin: #12080b;        /* --foreground / --metin: oklch(0.15 0.02 0) */
+  --gr-metin-soluk: #686163;  /* --muted-foreground / --metin-soluk: oklch(0.5 0.01 0) */
+  --gr-metin-ters: #f8f8f8;   /* --primary-foreground / --metin-ters: oklch(0.98 0 0) */
+  --gr-uyari: #945a00;        /* --uyari: oklch(0.52 0.12 70) */
+  --gr-uyari-zemin: #fff3df;  /* --uyari-zemin: oklch(0.97 0.03 80) */
+
+  /* Yazı */
+  --gr-font-baslik: Geist, "Geist Fallback", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --gr-font-govde: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --gr-font-kod: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Köşe yuvarlaklığı */
+  --gr-yaricap: 12px;         /* --radius / --yaricap */
+  --gr-yaricap-sm: 8px;       /* --yaricap-sm */
+  --gr-yaricap-hap: 999px;    /* hap biçimli düğmeler */
+
+  /* Gölgeler */
+  --gr-golge-sm: 0 8px 24px rgba(20, 35, 70, .06);   /* --shadow-sm / --golge-sm */
+  --gr-golge-md: 0 18px 48px rgba(20, 35, 70, .10);  /* --shadow-md / --golge-md */
+}

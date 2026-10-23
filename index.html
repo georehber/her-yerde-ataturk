@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Her Yerde Atatürk</title>
+<meta name="description" content="Dünyanın dört bir yanında Atatürk'ün izleri: Atatürk caddeleri, anıtları ve ziyaretçilerin eklediği yerler tek haritada.">
+<meta name="theme-color" content="#f3ead6">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Her Yerde Atatürk">
+<meta property="og:description" content="Dünyanın dört bir yanında Atatürk'ün izleri. Sen de bir yer ekle.">
+<meta property="og:image" content="https://georehber.com/her-yerde-ataturk/onizleme.png">
+<meta property="og:url" content="https://georehber.com/her-yerde-ataturk/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" href="https://geodata.georehber.com/icons/logo.png">
+<!-- Bağlantıları baştan aç: telefonda her sunucu için el sıkışma süresi kazanılır -->
+<link rel="preconnect" href="https://js.arcgis.com">
+<link rel="preconnect" href="https://www.arcgis.com">
+<link rel="preconnect" href="https://services-eu1.arcgis.com">
+<link rel="preconnect" href="https://services.arcgisonline.com">
+<link rel="preconnect" href="https://static.arcgis.com">
+<link rel="preconnect" href="https://basemaps.arcgis.com">
+<link rel="preconnect" href="https://cdn.arcgis.com">
+<link rel="preconnect" href="https://survey123.arcgis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="config.json" as="fetch" crossorigin>
+<link rel="preload" href="tiles/yogunluk/dizin.json" as="fetch" crossorigin>
+<!-- Yazı tipi stili ilk çizimi bekletmez (print ile iner, gelince tüm ekranlara açılır); display=swap ile yerine geçer -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Patrick+Hand&display=swap"
+      media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Patrick+Hand&display=swap"></noscript>
+<link rel="stylesheet" href="brand.css">
+<link rel="stylesheet" href="https://js.arcgis.com/4.32/esri/themes/light/main.css">
+<script>
+  window.configSozu = fetch("config.json").then(r => r.json());
+  window.karoDizini = fetch("tiles/yogunluk/dizin.json").then(r => r.json());
+</script>
+<!-- rough.js, ArcGIS'in AMD yükleyicisinden önce yüklenir: sonra yüklenirse UMD paketi kendini AMD modülü
+     olarak tanımlamaya çalışır ve genel "rough" adı oluşmaz -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/rough.js/3.1.0/rough.umd.js"
+        integrity="sha512-V+6pvD4mMN/jUvCFgjZMZ8tYWunzDLlBTNk+dNEWfjgYqcPpwqOtvaOSYQnG0p0RXXxmm67oNsllQ+c3sAykPw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://js.arcgis.com/4.32/"></script>
+<style>
+  /* El çizimi görünüm: kâğıt zemin, mürekkep kalemi, vurgu GeoRehber mavisi. Panel, düğme ve sayaç çerçeveleri
+     rough.js ile kalemle çizilir (.kaba); CSS çerçeveleri bu öğelerde saydamdır. */
+  :root {
+    --ana: #003286;
+    --ana-koyu: var(--gr-ana-koyu);
+    --ana-zemin: rgba(0, 50, 134, .08);
+    --murekkep: #2b2a28;
+    --ikincil: #5e5a52;
+    --cizgi: rgba(43, 42, 40, .35);
+    --kart: #f3ead6;
+    --zemin: #f3ead6;
+    --kagit: #f3ead6;
+    --sessiz: rgba(43, 42, 40, .08);
+    --golge: none;
+    --golge-guclu: 0 10px 30px rgba(43, 42, 40, .18);
+    --yaricap: 12px;
+    --yaricap-sm: 8px;
+    --el-yaricap: 255px 15px 225px 15px / 15px 225px 15px 255px;  /* elle çizilmiş kenar */
+    --font-baslik: "Caveat", "Patrick Hand", cursive;
+    --font-govde: "Patrick Hand", "Comic Sans MS", cursive;
+    --kenar: 16px;
+    --baslik: 60px;
+    --alt: 64px;  /* telefonda alta yapışık çubuğun yüksekliği */
+    --calcite-font-family: var(--font-govde);
+    --calcite-sans-family: var(--font-govde);
+    --calcite-color-brand: var(--ana);
+  }
+  /* rough.js çerçevesi: öğenin arkasında, içeriğin altında */
+  .kaba { isolation: isolate; }
+  .kaba > svg.kaba-cerceve { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1;
+                             pointer-events: none; overflow: visible; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; width: 100%; height: 100%; overflow: hidden;
+    background: var(--zemin); color: var(--murekkep);
+    font-family: var(--font-govde); -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--ana); outline-offset: 2px; }
+
+  /* Üst çubuk: logo, başlık, slogan */
+  header {
+    position: fixed; inset: 0 0 auto 0; height: calc(var(--baslik) + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) var(--kenar) 0; z-index: 30;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--kagit);
+  }
+  /* başlığın altında kalemle çekilmiş çift çizgi (rough.js, #baslik-cizgi) */
+  #baslik-cizgi { position: absolute; left: 0; right: 0; bottom: -4px; height: 8px; width: 100%; pointer-events: none;
+                  overflow: visible; }
+  .marka { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; color: inherit; text-decoration: none; }
+  .marka img { width: 34px; height: 41px; flex: none; }
+  .marka-yazi { min-width: 0; }
+  .marka h1 {
+    margin: 0; font-family: var(--font-baslik); font-size: 28px; font-weight: 700; line-height: 1;
+    white-space: nowrap; color: var(--murekkep);
+  }
+  .slogan {
+    display: block; margin-top: 2px; font-size: 14px; color: var(--ikincil);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .hakkinda-dugme {
+    position: relative; flex: none; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px;
+    border: 0; background: transparent; cursor: pointer;
+    font-size: 17px; color: var(--ana);
+  }
+  .hakkinda-dugme:hover { color: var(--ana-koyu); }
+
+  #harita { position: fixed; top: calc(var(--baslik) + 3px + env(safe-area-inset-top)); left: 0; right: 0; bottom: 0; }
+
+  /* Katmanlar ve lejant: açılışta açık, en fazla ekranın yarısı, taşan kısım kaydırılır */
+  #katman-paneli {
+    position: fixed; z-index: 20; top: calc(var(--baslik) + 3px + var(--kenar) + env(safe-area-inset-top));
+    /* masaüstünde sayaca kadar uzar: lejantın tamamı kaydırmadan görünür */
+    left: var(--kenar); width: 308px; max-height: calc(100vh - var(--baslik) - 130px);
+    max-height: calc(100dvh - var(--baslik) - 130px);
+    display: flex; flex-direction: column;
+    background: transparent;
+  }
+  .panel-baslik {
+    flex: none; display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px;
+    border: 0; background: none; cursor: pointer; text-align: left; border-radius: var(--yaricap); color: var(--ana);
+  }
+  .panel-baslik strong { flex: 1; font-family: var(--font-baslik); font-size: 23px; font-weight: 700; line-height: 1;
+                         color: var(--murekkep); }
+  .panel-baslik .ok { width: 18px; height: 18px; transition: transform .2s; color: var(--ikincil); }
+  #katman-paneli[data-acik="false"] .ok { transform: rotate(-90deg); }
+  #katman-paneli[data-acik="false"] .panel-govde { display: none; }
+  .panel-govde {
+    flex: 1 1 auto; min-height: 0; overflow-y: scroll; padding: 4px 4px 10px 6px; margin: 0 6px 9px;
+    border-top: 1.5px dashed var(--cizgi);
+    scrollbar-width: thin; scrollbar-color: rgba(43, 42, 40, .35) transparent; overscroll-behavior: contain;
+  }
+  .panel-govde::-webkit-scrollbar { width: 8px; }
+  .panel-govde::-webkit-scrollbar-track { background: transparent; }
+  .panel-govde::-webkit-scrollbar-thumb { background: rgba(43, 42, 40, .35); border-radius: 4px; }
+  .panel-govde::-webkit-scrollbar-thumb:hover { background: rgba(43, 42, 40, .55); }
+  .bolum + .bolum { border-top: 1px dashed rgba(43, 42, 40, .2); }
+  .katman {
+    display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 10px;
+    padding: 9px 8px; border-radius: var(--el-yaricap); cursor: pointer;
+  }
+  .katman:hover { background: rgba(43, 42, 40, .05); }
+  .simge { width: 28px; height: 28px; display: grid; place-items: center; transition: opacity .15s; }
+  .simge img { display: block; }
+  .katman-ad { font-size: 18px; line-height: 1.1; transition: opacity .15s; }
+  .katman-ipucu { display: block; font-size: 14.5px; color: var(--ikincil); margin-top: 1px; }
+  .katman[data-durum="olcek"] .katman-ipucu { color: var(--gr-uyari); }
+  .katman[data-durum="kapali"] .katman-ad, .katman[data-durum="kapali"] .simge,
+  .katman[data-durum="kapali"] + .lejant { opacity: .4; }
+  .anahtar { position: relative; width: 36px; height: 22px; flex: none; }
+  .anahtar input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .anahtar span {
+    position: absolute; inset: 0; border-radius: var(--el-yaricap); background: transparent; transition: background .15s;
+    pointer-events: none; border: 1.6px solid var(--murekkep);
+  }
+  .anahtar span::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%;
+    background: var(--kagit); border: 1.6px solid var(--murekkep); box-sizing: border-box; transition: transform .15s;
+  }
+  .anahtar input:checked + span { background: var(--ana); }
+  .anahtar input:checked + span::after { transform: translateX(14px); }
+  .anahtar input:focus-visible + span { outline: 3px solid var(--ana); outline-offset: 2px; }
+  /* Lejant girdileri (her katmanın altında) */
+  .lejant { margin: -2px 8px 10px 46px; font-size: 14.5px; color: var(--ikincil); }
+  .lejant-satir { display: flex; align-items: center; gap: 10px; min-height: 20px; }
+  .lejant-satir + .lejant-satir { margin-top: 3px; }
+  .lejant-cizgi { width: 40px; height: 12px; flex: none; display: block; overflow: visible; }
+  .kategoriler { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+  .kategoriler div { display: flex; align-items: center; gap: 5px; line-height: 1.1; }
+  .kategoriler img { flex: none; width: 20px; height: 20px; }
+  .yogunluk-ornekler { display: flex; gap: 4px; }
+  .yogunluk-ornekler img { flex: 1 1 0; min-width: 0; width: 44px; height: 22px; object-fit: cover; object-position: left;
+                            border-radius: 2px; }
+  .yogunluk-etiket { display: flex; justify-content: space-between; margin-top: 3px; font-size: 14px; }
+  .panel-not { margin: 4px 8px 2px; padding-top: 8px; border-top: 1px dashed rgba(43, 42, 40, .2);
+               font-size: 14.5px; color: var(--ikincil); line-height: 1.3; }
+
+  /* Alt: sayaç ve nokta ekle */
+  #sayac {
+    position: fixed; z-index: 15; left: var(--kenar);
+    bottom: calc(26px + env(safe-area-inset-bottom));
+    max-width: calc(100% - 2 * var(--kenar) - 180px);
+    display: flex; align-items: center; gap: 10px; padding: 9px 18px;
+    background: transparent;
+    font-size: 18px; white-space: nowrap;
+  }
+  #sayac .nokta { width: 8px; height: 8px; border-radius: 50%; background: var(--ana); flex: none; }
+  #sayac b { font-family: var(--font-baslik); font-size: 23px; font-weight: 700; line-height: 1; color: var(--ana); }
+  #sayac .ayrac { color: var(--ikincil); margin: 0 8px; }
+  #sayac .metin { overflow: hidden; text-overflow: ellipsis; }
+  #ekle {
+    position: fixed; z-index: 16; right: var(--kenar); bottom: calc(26px + env(safe-area-inset-bottom));
+    display: inline-flex; align-items: center; gap: 8px; height: 50px; padding: 0 24px 0 20px;
+    border: 0; background: transparent; color: #fff; cursor: pointer;
+    font-family: var(--font-baslik); font-size: 25px; font-weight: 700;
+    transition: transform .15s;
+  }
+  #ekle:hover { transform: rotate(-1deg) scale(1.02); }
+  #ekle:active { transform: scale(.97); }
+  #ekle svg { width: 20px; height: 20px; }
+
+  /* Form çekmecesi (geniş ekran) */
+  #cekmece { position: fixed; inset: 0; z-index: 40; visibility: hidden; }
+  #cekmece .perde { position: absolute; inset: 0; background: rgba(0, 20, 60, .35); opacity: 0; transition: opacity .2s; }
+  #cekmece .kutu {
+    position: absolute; top: 0; right: 0; bottom: 0; width: min(460px, 100%);
+    display: flex; flex-direction: column; background: var(--kart); box-shadow: var(--golge-guclu);
+    transform: translateX(100%); transition: transform .25s ease;
+  }
+  #cekmece.acik { visibility: visible; }
+  #cekmece.acik .perde { opacity: 1; }
+  #cekmece.acik .kutu { transform: none; }
+  .cekmece-ust { display: flex; align-items: center; gap: 12px; padding: 14px var(--kenar);
+                 border-bottom: 1px solid var(--cizgi); }
+  .cekmece-ust strong { flex: 1; font-family: var(--font-baslik); font-size: 26px; font-weight: 700; line-height: 1;
+                        color: var(--murekkep); }
+  .cekmece-ust a { font-size: 16px; color: var(--ana); }
+  .kapat { width: 36px; height: 36px; border: 0; border-radius: 18px; background: var(--sessiz); cursor: pointer;
+           display: grid; place-items: center; flex: none; }
+  .kapat:hover { background: var(--gr-ikincil); }
+  #form { flex: 1; width: 100%; border: 0; }
+
+  /* Hakkında */
+  dialog {
+    width: min(560px, calc(100% - 2 * var(--kenar))); max-height: calc(100% - 64px); padding: 0;
+    border: 1.8px solid var(--murekkep); border-radius: var(--el-yaricap); box-shadow: var(--golge-guclu);
+    color: var(--murekkep); background: var(--kagit); font-family: var(--font-govde);
+  }
+  dialog[open] { display: flex; flex-direction: column; }
+  dialog::backdrop { background: rgba(0, 20, 60, .45); }
+  .dialog-ic { padding: 24px 24px 8px; overflow-y: auto; }
+  .dialog-marka { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .dialog-marka img { width: 40px; height: 48px; }
+  dialog h2 { margin: 0; font-family: var(--font-baslik); font-size: 34px; font-weight: 700; line-height: 1;
+              color: var(--murekkep); }
+  dialog .giris { margin: 0 0 16px; color: var(--ikincil); font-size: 18px; line-height: 1.35; }
+  dialog h3 { margin: 18px 0 4px; font-family: var(--font-baslik); font-size: 24px; font-weight: 700; line-height: 1;
+              color: var(--ana); }
+  dialog p, dialog li { font-size: 17px; line-height: 1.35; margin: 0; }
+  dialog ul { margin: 0; padding-left: 18px; }
+  dialog a { color: var(--ana); }
+  .rakamlar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .rakam { padding: 10px 12px; border: 1.5px solid var(--murekkep); border-radius: var(--el-yaricap); }
+  .rakam b { display: block; font-family: var(--font-baslik); font-size: 30px; font-weight: 700; line-height: 1;
+             color: var(--ana); }
+  .rakam span { font-size: 15px; color: var(--ikincil); }
+  .dialog-alt { display: flex; justify-content: flex-end; padding: 12px 24px 20px; }
+  .dialog-alt button { position: relative; height: 44px; padding: 0 20px; border: 0; cursor: pointer; background: transparent;
+                       color: #fff; font-family: var(--font-baslik); font-size: 23px; font-weight: 700; }
+
+  /* Yüklenme */
+  #yukleniyor {
+    position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; background: var(--zemin);
+    transition: opacity .35s;
+  }
+  #yukleniyor.bitti { opacity: 0; pointer-events: none; }
+  .yukleme-ic { display: grid; justify-items: center; gap: 14px; color: var(--ikincil); font-size: 19px; }
+  .yukleme-ic img { width: 48px; height: 58px; }
+  .halka { width: 28px; height: 28px; border-radius: 50%; border: 2.5px dashed var(--murekkep); border-top-color: var(--ana);
+           animation: don 1.4s linear infinite; }
+  @keyframes don { to { transform: rotate(360deg); } }
+
+  /* ArcGIS arayüz uyumu: kâğıt zemin, mürekkep kontur, elle çizilmiş köşeler */
+  .esri-view .esri-ui-corner .esri-component.esri-widget--button,
+  .esri-view .esri-ui-corner .esri-zoom .esri-widget--button {
+    background: var(--kagit); color: var(--murekkep); border: 1.6px solid var(--murekkep);
+    border-radius: var(--el-yaricap); box-shadow: none;
+  }
+  .esri-view .esri-ui-corner .esri-zoom { background: transparent; box-shadow: none; display: grid; gap: 4px; }
+  .esri-view .esri-ui-corner .esri-component.esri-widget--button:hover,
+  .esri-view .esri-ui-corner .esri-zoom .esri-widget--button:hover { background: #ebe0c7; }
+  .esri-attribution { font-family: var(--font-govde); font-size: 12px; background: rgba(243, 234, 214, .85); }
+  /* Açılır pencere: kâğıt zemin, mürekkep, el yazısı. İçerik web haritadaki Arcade'den satır içi stillerle gelir;
+     web haritaya dokunmadan burada !important ile kalem görünümüne çevrilir. Calcite bileşenleri renk ve yazı
+     tipini CSS değişkenlerinden okur (gölge DOM'a değişkenler geçer). */
+  .esri-popup {
+    --calcite-color-foreground-1: #f3ead6; --calcite-color-foreground-2: #ebe0c7; --calcite-color-foreground-3: #e4d7ba;
+    --calcite-color-background: #f3ead6; --calcite-color-text-1: #2b2a28; --calcite-color-text-2: #4a463f;
+    --calcite-color-text-3: #5e5a52; --calcite-color-border-1: rgba(43, 42, 40, .45);
+    --calcite-color-border-2: rgba(43, 42, 40, .3); --calcite-color-border-3: rgba(43, 42, 40, .2);
+    --calcite-font-family: "Caveat", "Patrick Hand", cursive; --calcite-color-brand: #003286;
+  }
+  .esri-popup__main-container { background: var(--kagit); border: 1.8px solid var(--murekkep);
+                                border-radius: 14px 6px 16px 5px / 6px 16px 5px 14px; box-shadow: 3px 4px 0 rgba(43, 42, 40, .15); }
+  .esri-features__heading, .esri-popup__header-title { font-family: var(--font-baslik); font-size: 28px; font-weight: 700;
+                                                       color: var(--murekkep); }
+  .esri-features__container, .esri-feature, .esri-popup__header, .esri-features__footer { background: transparent; }
+  .esri-feature-content, .esri-feature-content * { font-family: var(--font-govde) !important; }
+  .esri-feature-content { font-size: 17px; color: var(--murekkep); }
+  .esri-feature-content table {
+    background: transparent !important; border: 1.6px solid var(--murekkep) !important;
+    border-radius: 12px 4px 14px 5px / 5px 14px 4px 12px !important; font-size: 17px !important; line-height: 1.25 !important;
+  }
+  .esri-feature-content td {
+    background: transparent !important; color: var(--murekkep) !important;
+    border-bottom: 1.2px dashed rgba(43, 42, 40, .35) !important; padding: 7px 12px !important;
+  }
+  .esri-feature-content tr:last-child td { border-bottom: 0 !important; }
+  .esri-feature-content td:first-child { color: var(--ana) !important; font-weight: 400 !important;
+                                         border-right: 1.2px dashed rgba(43, 42, 40, .35) !important; }
+  .esri-feature-content span[style*="border-radius:999px"] {  /* rozetler */
+    background: transparent !important; border: 1.4px solid currentColor; border-radius: var(--el-yaricap) !important;
+    font-size: 16px !important; font-weight: 400 !important; padding: 1px 10px !important;
+  }
+  .esri-feature-content a[style*="border-radius:999px"] {  /* Yol tarifi al / OpenStreetMap'te gör */
+    font-family: var(--font-baslik) !important; font-size: 21px !important; font-weight: 700 !important;
+    border: 1.8px solid var(--murekkep) !important; border-radius: var(--el-yaricap) !important;
+    padding: 4px 16px !important; line-height: 1.1;
+  }
+  .esri-feature-content a[style*="border-radius:999px"]:hover { transform: rotate(-1deg); }
+  .esri-feature-content img[src*="/attachments/"] { cursor: zoom-in; }
+
+  /* Katkı fotoğrafı büyük görünüm: dokununca/tıklayınca ekranı kaplar; dışına dokununca ya da Esc ile kapanır */
+  #buyuk-foto {
+    width: auto; max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); padding: 10px;
+    background: var(--kagit); border: 1.8px solid var(--murekkep); border-radius: 14px 6px 16px 5px / 6px 16px 5px 14px;
+  }
+  #buyuk-foto[open] { display: block; }
+  #buyuk-foto::backdrop { background: rgba(20, 18, 15, .78); }
+  #buyuk-foto img { display: block; max-width: calc(100vw - 48px); max-height: calc(100dvh - 48px); width: auto; height: auto;
+                    border: 1px solid #000; padding: 3px; background: #fff; cursor: zoom-out; }
+  #buyuk-foto .kapat { position: absolute; top: 16px; right: 16px; background: var(--kagit);
+                       border: 1.6px solid var(--murekkep); }
+
+  @media (max-width: 720px) {
+    .marka h1 { font-size: 25px; }
+    .marka img { width: 30px; height: 36px; }
+    .slogan { font-size: 13px; }
+    .hakkinda-dugme span { display: none; }
+    .hakkinda-dugme { width: 36px; padding: 0; justify-content: center; }
+    #katman-paneli { right: calc(var(--kenar) + 48px); width: auto; max-height: 50vh; max-height: 50dvh; }
+    .katman { padding: 8px 6px; }
+    .panel-baslik { padding: 10px 12px; }
+    /* Telefonda sayaç ve "Nokta ekle" ekranın altına yapışık tek bir çubukta; harita çubuğun üstünde biter */
+    #harita { bottom: calc(var(--alt) + env(safe-area-inset-bottom)); }
+    #sayac {
+      left: 0; right: 0; bottom: 0; width: 100%; max-width: none;
+      height: calc(var(--alt) + env(safe-area-inset-bottom));
+      padding: 0 calc(var(--kenar) + 140px) env(safe-area-inset-bottom) var(--kenar);
+      background: var(--kagit);
+    }
+    /* Esri alttaki açılır pencereyi haritanın %40'ıyla sınırlıyor; telefonda içerik sığmıyordu */
+    #harita .esri-popup--is-docked-bottom-center .esri-popup__main-container { max-height: 70% !important; }
+    #sayac .metin { display: flex; flex-direction: column; gap: 0; min-width: 0; line-height: 1.1; }
+    #sayac .s1, #sayac .s2 { display: block; overflow: hidden; text-overflow: ellipsis; }
+    #sayac .s1 { font-size: 17px; }
+    #sayac .s1 b { font-size: 21px; }
+    #sayac .s2 { font-size: 15px; color: var(--ikincil); }
+    #sayac .s2 b { font-size: 18px; }
+    #sayac .ayrac { display: none; }
+    #ekle {
+      bottom: calc((var(--alt) - 46px) / 2 + env(safe-area-inset-bottom));
+      height: 46px; padding: 0 16px 0 12px; font-size: 22px;
+    }
+  }
+  @media (max-width: 360px) {
+    .slogan { display: none; }
+    #sayac { padding-right: calc(var(--kenar) + 128px); }
+    #sayac .s1 { font-size: 15px; }
+    #ekle { padding: 0 12px 0 10px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation-duration: 0s !important; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <a class="marka" href="https://georehber.com/" aria-label="GeoRehber ana sayfası">
+    <img src="https://geodata.georehber.com/icons/logo.png" alt="GeoRehber logosu" width="34" height="41">
+    <span class="marka-yazi">
+      <h1>Her Yerde Atatürk</h1>
+      <span class="slogan">Dünyanın dört bir yanında Atatürk'ün izleri</span>
+    </span>
+  </a>
+  <button class="hakkinda-dugme kaba" type="button" id="hakkinda-ac" aria-haspopup="dialog" aria-label="Hakkında">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 10.5v6M12 7.2v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Hakkında</span>
+  </button>
+  <svg id="baslik-cizgi" aria-hidden="true"></svg>
+</header>
+
+<div id="harita" role="application" aria-label="Her Yerde Atatürk haritası"></div>
+
+<section id="katman-paneli" class="kaba" data-acik="true" aria-label="Katmanlar ve lejant">
+  <button class="panel-baslik" type="button" id="panel-ac-kapa" aria-expanded="true" aria-controls="panel-govde">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5 9-5zm-9 9l9 5 9-5M3 16l9 5 9-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    <strong>Katmanlar ve lejant</strong>
+    <svg class="ok" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <div class="panel-govde" id="panel-govde" tabindex="0" aria-label="Lejant (kaydırılabilir)">
+
+    <div class="bolum">
+      <label class="katman" data-katman="her_yerde_ataturk_katkilar">
+        <span class="simge"><img src="img/katki.svg" width="26" height="26" alt=""></span>
+        <span class="katman-ad">Katkılar<span class="katman-ipucu">Ziyaretçilerin eklediği yerler</span></span>
+        <span class="anahtar"><input type="checkbox" checked aria-label="Katkılar katmanını göster"><span></span></span>
+      </label>
+      <div class="lejant">
+        <div class="kategoriler" aria-label="Katkı kategorileri">
+          <div><img data-kategori="anit" alt="">Anıt, heykel, büst</div>
+          <div><img data-kategori="mekan" alt="">Kaldığı, ziyaret ettiği yer</div>
+          <div><img data-kategori="adini_tasiyan" alt="">Adını taşıyan yer</div>
+          <div><img data-kategori="sanat" alt="">Duvar resmi, rölyef</div>
+          <div><img data-kategori="anma" alt="">Anma alanı</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bolum">
+      <label class="katman" data-katman="her_yerde_ataturk_anitlar">
+        <span class="simge"><img src="img/anit.svg" width="24" height="24" alt=""></span>
+        <span class="katman-ad">Atatürk anıtları<span class="katman-ipucu">Heykel, büst ve anıtlar</span></span>
+        <span class="anahtar"><input type="checkbox" checked aria-label="Anıtlar katmanını göster"><span></span></span>
+      </label>
+    </div>
+
+    <div class="bolum">
+      <label class="katman" data-katman="her_yerde_ataturk_caddeler">
+        <span class="simge"><svg width="24" height="22" viewBox="0 0 24 22" aria-hidden="true"><path d="M2 16.4c4.6-.8 8.3-9.4 20-10.2" fill="none" stroke="#2b2a28" stroke-width="2.6" stroke-linecap="round"/><path d="M2.6 15.6c4.8-1.2 8-8.6 19.6-9.8" fill="none" stroke="#2b2a28" stroke-width="1" stroke-linecap="round" opacity=".5"/></svg></span>
+        <span class="katman-ad">Atatürk caddeleri<span class="katman-ipucu">Atatürk'ün adını taşıyan yollar</span></span>
+        <span class="anahtar"><input type="checkbox" checked aria-label="Caddeler katmanını göster"><span></span></span>
+      </label>
+      <div class="lejant" aria-label="Yol türüne göre çizgi kalınlığı">
+        <div class="lejant-satir"><svg class="lejant-cizgi" data-genislik="4" aria-hidden="true"></svg>Ana yol</div>
+        <div class="lejant-satir"><svg class="lejant-cizgi" data-genislik="2.7" aria-hidden="true"></svg>Tali yol</div>
+        <div class="lejant-satir"><svg class="lejant-cizgi" data-genislik="1.6" aria-hidden="true"></svg>Mahalle yolu</div>
+      </div>
+    </div>
+
+    <div class="bolum">
+      <label class="katman" data-katman="her_yerde_ataturk_cadde_noktalar">
+        <span class="simge"><img src="img/lejant_yogunluk_4.png" width="24" height="24" alt=""
+              style="object-fit:cover;border-radius:50%;border:1.5px solid #b23a2e"></span>
+        <span class="katman-ad">Cadde yoğunluğu<span class="katman-ipucu">Caddelerin sık olduğu yerler</span></span>
+        <span class="anahtar"><input type="checkbox" checked aria-label="Cadde yoğunluğu katmanını göster"><span></span></span>
+      </label>
+      <div class="lejant" aria-label="Cadde yoğunluğu, seyrekten sıka beş tarama">
+        <div class="yogunluk-ornekler">
+          <img src="img/lejant_yogunluk_1.png" alt=""><img src="img/lejant_yogunluk_2.png" alt=""><img src="img/lejant_yogunluk_3.png" alt=""><img src="img/lejant_yogunluk_4.png" alt=""><img src="img/lejant_yogunluk_5.png" alt="">
+        </div>
+        <div class="yogunluk-etiket"><span>Düşük</span><span>Yüksek</span></div>
+      </div>
+    </div>
+
+    <p class="panel-not">Yakınlaştırdıkça caddeler tek tek görünür.</p>
+  </div>
+</section>
+
+<div id="sayac" class="kaba" aria-live="polite"><span class="nokta" aria-hidden="true"></span><span class="metin">Yükleniyor...</span></div>
+
+<button id="ekle" class="kaba" type="button" aria-haspopup="dialog">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+  Nokta ekle
+</button>
+
+<div id="cekmece" aria-hidden="true">
+  <div class="perde"></div>
+  <div class="kutu" role="dialog" aria-modal="true" aria-labelledby="cekmece-baslik">
+    <div class="cekmece-ust">
+      <strong id="cekmece-baslik">Haritaya bir yer ekle</strong>
+      <a id="yeni-sekme" href="#" target="_blank" rel="noopener">Yeni sekmede aç</a>
+      <button class="kapat" id="cekmece-kapat" type="button" aria-label="Kapat">
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <iframe id="form" title="Nokta ekleme formu" allow="geolocation; camera"></iframe>
+  </div>
+</div>
+
+<dialog id="hakkinda" aria-labelledby="hakkinda-baslik">
+  <div class="dialog-ic">
+    <div class="dialog-marka">
+      <img src="https://geodata.georehber.com/icons/logo.png" alt="" width="40" height="48">
+      <h2 id="hakkinda-baslik">Her Yerde Atatürk</h2>
+    </div>
+    <p class="giris">Atatürk'ün adını taşıyan caddeler, anıtları ve dünyanın dört bir yanından sizin eklediğiniz yerler tek haritada.</p>
+    <div class="rakamlar">
+      <div class="rakam"><b id="r-km">–</b><span>km Atatürk caddesi</span></div>
+      <div class="rakam"><b id="r-anit">–</b><span>anıt, heykel, büst</span></div>
+      <div class="rakam"><b id="r-katki">–</b><span>eklenen yer</span></div>
+    </div>
+    <h3>Veri</h3>
+    <p>Caddeler ve anıtlar OpenStreetMap'ten alındı (Ekim 2026).</p>
+    <h3>Katkılar</h3>
+    <ul>
+      <li>Eklediğiniz her yer önce moderatöre gelir, onaylanınca haritada görünür.</li>
+      <li>Tanınır yüz, internetten alınmış fotoğraf, yanlış konum, tekrar kayıt ve alakasız içerik yayınlanmaz.</li>
+      <li>Kaynağı gösterilemeyen tarihi iddialar "Doğrulanmadı" etiketiyle gösterilir.</li>
+    </ul>
+    <h3>Künye</h3>
+    <p>Hazırlayan: Mehmet Ali Yanmaz · <a href="https://georehber.com/" target="_blank" rel="noopener">georehber.com</a> · Harita verisi © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap katkıcıları</a> (ODbL) · Altlık: Esri Colored Pencil · Kalem çizimleri: <a href="https://roughjs.com/" target="_blank" rel="noopener">rough.js</a> (MIT) · Yazı tipleri: Caveat, Patrick Hand (SIL Open Font License) · Renkler: Okabe-Ito paleti, renk körlüğüne uygun · Araç: Claude, Python, ArcGIS Online</p>
+  </div>
+  <div class="dialog-alt"><button type="button" id="hakkinda-kapat" class="kaba">Haritaya dön</button></div>
+</dialog>
+
+<dialog id="buyuk-foto" aria-label="Fotoğrafın büyük hâli">
+  <img alt="">
+  <button class="kapat" type="button" aria-label="Kapat">
+    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+  </button>
+</dialog>
+
+<div id="yukleniyor" role="status"><div class="yukleme-ic"><img src="https://geodata.georehber.com/icons/logo.png" alt=""><div class="halka" aria-hidden="true"></div>Harita yükleniyor</div></div>
+
+<script>
+// ---- Kalemle çizilmiş çerçeveler (rough.js) -------------------------------------------------------------
+const MUREKKEP = "#2b2a28", KAGIT = "#f3ead6", MAVI = "#003286";
+const SVG_NS = "http://www.w3.org/2000/svg";
+// rough.js 3.1.0'da seed seçeneği yok: çizim sırasında Math.random tohumlu bir üreteçle (mulberry32) değiştirilir,
+// böylece aynı öğe her yeniden çizimde aynı titremeyle çizilir
+function tohumlu(tohum, cizim) {
+  const asil = Math.random;
+  let s = tohum >>> 0;
+  Math.random = () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), s | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  try { return cizim(); } finally { Math.random = asil; }
+}
+const darEkranSorgu = window.matchMedia("(max-width: 720px)");
+function kabaCiz(el, tohum) {
+  let svg = el.querySelector(":scope > svg.kaba-cerceve");
+  if (!svg) {
+    svg = document.createElementNS(SVG_NS, "svg");
+    svg.setAttribute("class", "kaba-cerceve"); svg.setAttribute("aria-hidden", "true");
+    el.prepend(svg);
+  }
+  const w = el.offsetWidth, h = el.offsetHeight;
+  svg.replaceChildren();
+  if (!w || !h) return;
+  const rc = rough.svg(svg);
+  const dolu = el.id === "ekle" || el.id === "hakkinda-kapat";
+  tohumlu(tohum, () => {
+    if (el.id === "sayac" && darEkranSorgu.matches) {  // telefonda alt çubuk: yalnız üst kenarda kalem çizgisi
+      svg.appendChild(rc.line(0, 2, w, 2, { stroke: MUREKKEP, strokeWidth: 1.4, roughness: 1.2 }));
+      return;
+    }
+    svg.appendChild(rc.rectangle(3, 3, w - 6, h - 6, {
+      stroke: MUREKKEP, strokeWidth: 1.6, roughness: 1.3, bowing: 1.4,
+      fill: dolu ? MAVI : KAGIT, fillStyle: "solid"
+    }));
+  });
+}
+function baslikCizgisi() {
+  const svg = document.getElementById("baslik-cizgi"), w = svg.getBoundingClientRect().width;
+  svg.replaceChildren();
+  const rc = rough.svg(svg);
+  tohumlu(7, () => {
+    svg.appendChild(rc.line(0, 3, w, 3, { stroke: MUREKKEP, strokeWidth: 1.6, roughness: 1.5, bowing: 0.6 }));
+    svg.appendChild(rc.line(0, 6, w, 5.5, { stroke: MUREKKEP, strokeWidth: 0.8, roughness: 1.8, bowing: 0.8 }));
+  });
+}
+function lejantCizgileri() {
+  document.querySelectorAll(".lejant-cizgi").forEach((svg, i) => {
+    svg.replaceChildren();
+    const rc = rough.svg(svg), g = Number(svg.dataset.genislik);
+    tohumlu(40 + i, () => svg.appendChild(rc.line(2, 6, 38, 6, { stroke: MUREKKEP, strokeWidth: g, roughness: 0.9, bowing: 1 })));
+  });
+}
+if (window.rough) {
+  const kabalar = [...document.querySelectorAll(".kaba")];
+  const tohumlar = new Map(kabalar.map((el, i) => [el, 101 + i * 17]));
+  const izleyici = new ResizeObserver(girdiler => girdiler.forEach(g => kabaCiz(g.target, tohumlar.get(g.target))));
+  kabalar.forEach(el => izleyici.observe(el));
+  new ResizeObserver(baslikCizgisi).observe(document.querySelector("header"));
+  lejantCizgileri();
+  darEkranSorgu.addEventListener("change", () => kabaCiz(document.getElementById("sayac"), tohumlar.get(document.getElementById("sayac"))));
+}
+
+require([
+  "esri/WebMap", "esri/Basemap", "esri/views/MapView", "esri/widgets/Home", "esri/widgets/Locate", "esri/widgets/Zoom",
+  "esri/core/reactiveUtils", "esri/geometry/support/webMercatorUtils", "esri/layers/WebTileLayer",
+  "esri/layers/support/TileInfo", "esri/symbols/CIMSymbol", "esri/symbols/PictureMarkerSymbol",
+  "esri/renderers/SimpleRenderer"
+], (WebMap, Basemap, MapView, Home, Locate, Zoom, reactiveUtils, wmu, WebTileLayer, TileInfo, CIMSymbol,
+    PictureMarkerSymbol, SimpleRenderer) => {
+  const $ = s => document.querySelector(s);
+  const sayi = n => Number(n).toLocaleString("tr-TR", { maximumFractionDigits: 0 });
+  const darEkran = darEkranSorgu;
+
+  // Esri "Colored Pencil Map" altlığı (sahibi: esri). İçindeki vektör katman esri_vector'ün "Colored Pencil"ı.
+  const ALTLIK_ID = "826498a48bd0424f9c9315214f2165d4";
+
+  // Yoğunluk karoları: 512 px @2x (her karo standart 256'lık karonun alanını kapsar). LOD çözünürlüğü standart
+  // seviyenin yarısı, ölçeği standart seviyenin ölçeği; dpi 192 bu ikisini tutarlı kılar.
+  function yogunlukKatmani(eski, dizin) {
+    const R = 20037508.342789244, lods = [];
+    for (let z = 0; z <= 20; z++) {
+      const res = 2 * R / 256 / 2 ** z;
+      lods.push({ level: z, levelValue: String(z), resolution: res / 2, scale: res * 96 / 0.0254 });
+    }
+    const tileInfo = new TileInfo({ size: [512, 512], dpi: 192, format: "png", origin: { x: -R, y: R },
+                                    spatialReference: { wkid: 102100 }, lods });
+    const varolan = new Set(Object.entries(dizin).flatMap(([z, liste]) => liste.map(k => `${z}/${k}`)));
+    const taban = new URL("tiles/yogunluk/", location.href).href;
+    const tuval = document.createElement("canvas"); tuval.width = tuval.height = 1;
+    const BOS = tuval.toDataURL("image/png");  // tamamen saydam 1x1
+    // Boş karolar üretilmedi; dizinde olmayan karo istenmez (404 ve konsol hatası olmaz)
+    const KaroKatmani = WebTileLayer.createSubclass({
+      getTileUrl(level, row, col) {
+        const k = `${level}/${col}/${row}`;
+        return varolan.has(k) ? `${taban}${k}.png` : BOS;
+      }
+    });
+    return new KaroKatmani({
+      urlTemplate: `${taban}{level}/{col}/{row}.png`, tileInfo,
+      id: eski.id, title: eski.title, visible: eski.visible, opacity: eski.opacity,
+      minScale: eski.minScale, maxScale: eski.maxScale,
+      copyright: "Cadde yoğunluğu: Her Yerde Atatürk, OpenStreetMap katkıcıları"
+    });
+  }
+
+  // Cadde çizgisi: koyu kalem, kalınlık yol türüne göre aynı. Titreşim: ana çizgide rastgele dalga
+  // (CIMGeometricEffectWave, Random); üstünden hafif kaymış, yarı saydam ince ikinci bir kalem geçişi
+  // (Offset + Wave). Jog da çalışıyor ama yolu şimşek gibi kırdığı için kullanılmadı.
+  function kalemCizgisi(genislik) {
+    const darbe = (w, renk, efektler) => ({ type: "CIMSolidStroke", enable: true, width: w, color: renk,
+                                             capStyle: "Round", joinStyle: "Round", effects: efektler });
+    return new CIMSymbol({ data: { type: "CIMSymbolReference", symbol: { type: "CIMLineSymbol", symbolLayers: [
+      darbe(Math.max(0.5, genislik * 0.4), [43, 42, 40, 130], [
+        { type: "CIMGeometricEffectOffset", offset: 1, method: "Rounded", option: "Fast" },
+        { type: "CIMGeometricEffectWave", amplitude: 0.9, period: 7, seed: 11, waveform: "Random" }]),
+      darbe(genislik, [43, 42, 40, 255], [
+        { type: "CIMGeometricEffectWave", amplitude: 0.7, period: 10, seed: 3, waveform: "Random" }])
+    ] } } });
+  }
+
+  // Altlıktaki kırmızı şehir/mahalle iğneleri ve adları, kırmızı yoğunluk taramasıyla karışıyor:
+  // iğneler saydam yapılır, adlar mürekkep rengine çekilir
+  async function altlikIgneleriniGizle(basemap) {
+    await basemap.load();
+    const vt = basemap.baseLayers.at(0);
+    await vt.load();
+    vt.currentStyleInfo.style.layers
+      .filter(l => l.layout && /^(Neighborhood|City )/.test(l.id) && (l.layout["icon-image"] || l.layout["text-field"]))
+      .forEach(l => {
+        const boya = { ...(vt.getPaintProperties(l.id) || {}) };
+        if (l.layout["icon-image"]) boya["icon-opacity"] = 0;
+        if (l.layout["text-field"]) boya["text-color"] = "#3a3631";
+        vt.setPaintProperties(l.id, boya);
+      });
+  }
+
+  // Katkı raptiyesi: başın rengi kategori rengi. Eski sembolün iki katı boyutta (raptiye kutunun bir kısmını
+  // kapladığı için 10 pt'ta çok küçük kalıyordu)
+  const RAPTIYE_KAT = 2;
+  // Anıt yıldızı eski 7 pt dairenin yerine; yıldız kutunun içinde daha az yer kapladığı için büyütülür
+  const ANIT_BOYUT = 16;
+  // Katkı kategorileri: renk körlüğüne dayanıklı Okabe-Ito paleti (web haritadaki renklerin yerine yalnız sayfada).
+  // Protanopi, döteranopi ve tritanopi benzetiminde en yakın iki renk arası ΔE > 16 (eski palette 7,6'ya iniyordu).
+  const KATKI_RENKLERI = { anit: "#0072B2", mekan: "#CC79A7", adini_tasiyan: "#009E73", sanat: "#E69F00", anma: "#56B4E9" };
+  const raptiye = (svg, renk) => "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace("#b23a2e", renk));
+
+  async function elCizimiKatmanlar(harita) {
+    const [dizin, raptiyeSvg] = await Promise.all([
+      window.karoDizini, fetch("img/katki.svg").then(r => r.text())
+    ]);
+    const isi = harita.findLayerById("her_yerde_ataturk_cadde_noktalar");
+    const caddeler = harita.findLayerById("her_yerde_ataturk_caddeler");
+    const anitlar = harita.findLayerById("her_yerde_ataturk_anitlar");
+    const katkilar = harita.findLayerById("her_yerde_ataturk_katkilar");
+    // Katmanlar burada yüklenmez: ölçekler, semboller ve etiketler web haritanın kendisinden okunur.
+    // Yükleme haritayla birlikte, paralel olur (açılışı bekletmez).
+
+    // Isı haritası sayfadan kalkar (ArcGIS Online'daki öğe değişmez); aynı yere aynı kimlik ve ölçekle karolar
+    const sira = harita.layers.indexOf(isi);
+    harita.layers.remove(isi);
+    harita.layers.add(yogunlukKatmani(isi, dizin), sira);
+
+    const rc = caddeler.renderer.clone();
+    rc.uniqueValueInfos.forEach(b => { b.symbol = kalemCizgisi(b.symbol.width); });
+    caddeler.renderer = rc;
+
+    const anitBoyut = ANIT_BOYUT;
+    anitlar.renderer = new SimpleRenderer({
+      symbol: new PictureMarkerSymbol({ url: new URL("img/anit.svg", location.href).href, width: anitBoyut, height: anitBoyut })
+    });
+
+    const rk = katkilar.renderer.clone();
+    const renkler = {};
+    rk.uniqueValueInfos.forEach(b => {
+      const boyut = b.symbol.size * RAPTIYE_KAT, renk = KATKI_RENKLERI[b.value] ?? b.symbol.color.toHex();
+      renkler[b.value] = renk;
+      // iğnenin ucu noktaya otursun: simgede uç, merkezin biraz solunda ve altında
+      b.symbol = new PictureMarkerSymbol({ url: raptiye(raptiyeSvg, renk), width: boyut, height: boyut,
+                                           xoffset: boyut * 0.08, yoffset: boyut * 0.45 });
+    });
+    katkilar.renderer = rk;
+    // "Doğrulanmadı" bilgisi haritada etiket olarak gösterilmez; açılır penceredeki rozette görünür
+    // (web haritadaki etiket tanımı değişmez, yalnız sayfada kapatılır)
+    katkilar.labelsVisible = false;
+    // Katmanlar panelindeki genel katkı simgesi: kategorilerle karışmasın diye mürekkep renginde
+    const genelSimge = document.querySelector('[data-katman="her_yerde_ataturk_katkilar"] .simge img');
+    if (genelSimge) genelSimge.src = raptiye(raptiyeSvg, "#2b2a28");
+    document.querySelectorAll("[data-kategori]").forEach(img => {
+      if (renkler[img.dataset.kategori]) img.src = raptiye(raptiyeSvg, renkler[img.dataset.kategori]);
+    });
+  }
+
+  // Katmanlar paneli masaüstünde açılışta açık; telefonda haritanın yarısını kapattığı için kapalı başlar.
+  // Başlığa dokununca açılır/daralır.
+  const panel = $("#katman-paneli");
+  if (darEkran.matches) {
+    panel.dataset.acik = "false";
+    $("#panel-ac-kapa").setAttribute("aria-expanded", "false");
+  }
+  let paddingGuncelle = () => {};
+  $("#panel-ac-kapa").addEventListener("click", () => {
+    const acik = panel.dataset.acik !== "true";
+    panel.dataset.acik = String(acik);
+    $("#panel-ac-kapa").setAttribute("aria-expanded", String(acik));
+    paddingGuncelle();
+  });
+
+  // Açılır penceredeki katkı fotoğrafı: tıklanınca büyük hâli açılır. Pencerede 800 px'e küçültülmüş hali var;
+  // büyük görünümde 1920 px (formun fotoğraf sınırı) istenir. Dosya adı hiçbir yerde gösterilmez.
+  const buyukFoto = $("#buyuk-foto");
+  document.addEventListener("click", e => {
+    const kucuk = e.target.closest?.('.esri-feature-content img[src*="/attachments/"]');
+    if (!kucuk) return;
+    const img = buyukFoto.querySelector("img");
+    img.src = kucuk.src;  // önce eldeki küçük hali göster, büyük hali gelince değiştir
+    const buyuk = new Image();
+    buyuk.onload = () => { if (buyukFoto.open) img.src = buyuk.src; };
+    buyuk.src = kucuk.src.replace(/([?&])w=\d+/, "$1w=1920");
+    buyukFoto.showModal();
+  });
+  buyukFoto.addEventListener("click", () => buyukFoto.close());
+
+  const hakkinda = $("#hakkinda");
+  $("#hakkinda-ac").addEventListener("click", () => hakkinda.showModal());
+  $("#hakkinda-kapat").addEventListener("click", () => hakkinda.close());
+  hakkinda.addEventListener("click", e => { if (e.target === hakkinda) hakkinda.close(); });
+
+  window.configSozu.then(async config => {
+    // Altlık web haritayla birlikte verilir: web haritadaki eski altlık (Light Gray) hiç istenmez,
+    // Colored Pencil'ın stili web haritayla aynı anda yüklenmeye başlar
+    const altlik = new Basemap({ portalItem: { id: ALTLIK_ID } });
+    altlikIgneleriniGizle(altlik).catch(() => {});
+    const harita = new WebMap({ portalItem: { id: config.webmap_id }, basemap: altlik });
+    await harita.load();
+    await elCizimiKatmanlar(harita);
+    // Sayaç haritanın çizilmesini beklemez: katmanlar yüklenince hesaplanır (arka plandaki sekmede de çalışır)
+    (async () => {
+      await harita.loadAll();
+      // Sayaç: doğrulanmış cadde uzunluğu ve dünya genelinde onaylı katkı. İstatistik sorgusu katman
+      // filtresini (hariç tutulan adlar, definitionExpression) kendiliğinden uygulamadığı için açıkça eklenir.
+      const caddeler = harita.findLayerById("her_yerde_ataturk_caddeler");
+      const katkilar = harita.findLayerById("her_yerde_ataturk_katkilar");
+      const anitlar = harita.findLayerById("her_yerde_ataturk_anitlar");
+      const q = caddeler.createQuery();
+      // Katman filtresi yalnız doğrulanmış caddeleri bırakır (onaylılar dahil); toplam sorgusuna açıkça eklenir
+      q.where = caddeler.definitionExpression || "1=1";
+      q.outStatistics = [{ statisticType: "sum", onStatisticField: "uzunluk_m", outStatisticFieldName: "toplam" }];
+      const [ist, katki, anit] = await Promise.all([
+        caddeler.queryFeatures(q), katkilar.queryFeatureCount(), anitlar.queryFeatureCount()
+      ]);
+      const km = ist.features[0].attributes.toplam / 1000;
+      $("#sayac .metin").innerHTML =
+        `<span class="s1"><b>${sayi(km)} km</b> Atatürk caddesi</span><span class="ayrac">·</span>` +
+        `<span class="s2">şu ana kadar <b>${sayi(katki)}</b> yer eklendi</span>`;
+      $("#r-km").textContent = sayi(km);
+      $("#r-anit").textContent = sayi(anit);
+      $("#r-katki").textContent = sayi(katki);
+      window.sayacHazir = true;
+      performance.mark("sayac-hazir");
+      window.kmDegeri = km;
+    })().catch(hata => {
+      $("#sayac .metin").textContent = "Sayaç yüklenemedi.";
+      window.sayfaHatasi = String(hata);
+    });
+    const view = new MapView({
+      container: "harita", map: harita,
+      // Zoom basamağına yapışma kapalı: dar ekranda Türkiye bir basamak fazla uzaklaşmadan sığar
+      constraints: { snapToZoom: false },
+      ui: { components: ["attribution"] },
+      // Açılır pencere hep sabit: masaüstünde sağ üstte (soldaki panelin altında kalmaz, uzun içerik sığar),
+      // telefonda altta
+      popup: {
+        dockEnabled: true,
+        dockOptions: { buttonEnabled: false, breakpoint: false,
+                       position: darEkran.matches ? "bottom-center" : "top-right" }
+      }
+    });
+    window.view = view;
+    // Açık panelin kapladığı yer harita boşluğuna eklenir: Türkiye görünen alanın ortasına oturur
+    paddingGuncelle = () => {
+      const k = 16, b = panel.getBoundingClientRect(), ust = $("#harita").getBoundingClientRect().top;
+      view.padding = darEkran.matches
+        ? { top: b.bottom - ust + k, left: 0, right: 0, bottom: 0 }  // alt çubuk haritanın dışında
+        : { top: 0, left: panel.dataset.acik === "true" ? b.right + k : 0, right: 0, bottom: 0 };
+    };
+    paddingGuncelle();
+    window.addEventListener("resize", paddingGuncelle);
+    darEkran.addEventListener("change", () => {
+      view.popup.dockOptions = { ...view.popup.dockOptions, position: darEkran.matches ? "bottom-center" : "top-right" };
+    });
+    view.ui.add(new Zoom({ view }), "top-right");
+    view.ui.add(new Home({ view }), "top-right");
+    view.ui.add(new Locate({ view, scale: 25000 }), "top-right");
+
+    await view.when();
+    view.goTo(harita.initialViewProperties.viewpoint, { animate: false })
+      .then(() => darEkran.matches && view.goTo({ scale: view.scale * 1.15 }, { animate: false }))  // batı ucu kesilmesin
+      .catch(() => {});
+    // Perde, altlık haritanın ilk çizimi biter bitmez kalkar; katmanlar arkadan gelir
+    performance.mark("harita-hazir");
+    const perdeyiKaldir = () => {
+      if ($("#yukleniyor").classList.contains("bitti")) return;
+      $("#yukleniyor").classList.add("bitti"); performance.mark("perde-kalkti");
+    };
+    harita.basemap.load().then(b => view.whenLayerView(b.baseLayers.at(0)))
+      .then(lv => reactiveUtils.whenOnce(() => !lv.updating))
+      .then(perdeyiKaldir, perdeyiKaldir);
+    setTimeout(perdeyiKaldir, 1500);  // kalem altlığın bütün karoları beklenmez; kalanı arkadan tamamlanır
+    reactiveUtils.whenOnce(() => !view.updating).then(() => performance.mark("tum-katmanlar"));
+
+    // Katman satırları: aç/kapa ve ölçeğe göre ipucu
+    const satirlar = [...document.querySelectorAll(".katman")].map(el => {
+      const katman = harita.findLayerById(el.dataset.katman);
+      const kutu = el.querySelector("input");
+      const ipucu = el.querySelector(".katman-ipucu");
+      kutu.checked = katman.visible;
+      kutu.addEventListener("change", () => { katman.visible = kutu.checked; });
+      return { el, katman, ipucu, asil: ipucu.textContent };
+    });
+    const ipuclari = () => satirlar.forEach(({ el, katman, ipucu, asil }) => {
+      const s = view.scale;
+      let durum = "gorunur", metin = asil;
+      if (!katman.visible) { durum = "kapali"; metin = "Kapalı"; }
+      else if (katman.minScale && s > katman.minScale) { durum = "olcek"; metin = "Yakınlaştırınca görünür"; }
+      else if (katman.maxScale && s < katman.maxScale) { durum = "olcek"; metin = "Uzaklaştırınca görünür"; }
+      el.dataset.durum = durum;
+      ipucu.textContent = metin;
+    });
+    reactiveUtils.watch(() => [view.scale, ...satirlar.map(s => s.katman.visible)], ipuclari, { initial: true });
+
+
+    // Nokta ekle. Survey123 iframe içinde dar ekranda telefon düzenine geçmediğinden telefonda form
+    // kendi sayfasında açılır. center formdaki konumu da doldurduğu için yalnız sokak ölçeğinde gönderilir.
+    const cekmece = $("#cekmece");
+    const formAdresi = () => {
+      let adres = `${config.survey_url}?hide=navbar,header`;
+      if (view.scale <= 50000) {
+        const m = wmu.webMercatorToGeographic(view.center);
+        adres += `&center=${m.y.toFixed(6)},${m.x.toFixed(6)}`;
+      }
+      return adres;
+    };
+    const cekmeceKapat = () => {
+      cekmece.classList.remove("acik"); cekmece.setAttribute("aria-hidden", "true"); $("#ekle").focus();
+    };
+    $("#ekle").addEventListener("click", () => {
+      const adres = formAdresi();
+      if (darEkran.matches) { window.open(adres, "_blank", "noopener"); return; }
+      if ($("#form").dataset.adres !== adres) { $("#form").src = adres; $("#form").dataset.adres = adres; }
+      $("#yeni-sekme").href = adres;
+      cekmece.classList.add("acik"); cekmece.setAttribute("aria-hidden", "false");
+      $("#cekmece-kapat").focus();
+    });
+    $("#cekmece-kapat").addEventListener("click", cekmeceKapat);
+    // Geniş ekranda form, harita yüklendikten sonra arka planda hazırlanır: "Nokta ekle" anında açılır
+    if (!darEkran.matches) {
+      reactiveUtils.whenOnce(() => !view.updating).then(() => setTimeout(() => {
+        if (!$("#form").dataset.adres) { const a = formAdresi(); $("#form").src = a; $("#form").dataset.adres = a; }
+      }, 1500));
+    }
+    cekmece.querySelector(".perde").addEventListener("click", cekmeceKapat);
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && cekmece.classList.contains("acik")) cekmeceKapat();
+    });
+  }).catch(hata => {
+    $("#sayac .metin").textContent = "Harita yüklenemedi. Sayfayı yenileyin.";
+    $("#yukleniyor").classList.add("bitti");
+    window.sayfaHatasi = String(hata);
+  });
+});
+</script>
+</body>
+</html>

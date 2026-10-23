@@ -1,0 +1,27 @@
+{
+  "webmap_id": "d9e6e497878045b3902a437505aaafb0",
+  "portal": "https://www.arcgis.com",
+  "klasor": "Atatürk",
+  "katmanlar": {
+    "caddeler": "a43a57778fe14dbc99127ff0d3f96084",
+    "cadde_noktalar": "408e81674998490c8190681a8e471304",
+    "anitlar": "351d2eac48084bb497b16c9c3161fb3b",
+    "katkilar_onayli": "f6f5f179991f4baf91f4ad12890a5ac0",
+    "isi_haritasi_kaynagi": "9cc39a0cbd9243fcb1bff865e823b307",
+    "cadde_yogunluk_noktalari": "9cc39a0cbd9243fcb1bff865e823b307"
+  },
+  "olcek_esikleri": {
+    "anitlar_min": 2000000,
+    "caddeler_min": 600000,
+    "isi_haritasi_max": 600000
+  },
+  "survey_form_id": "8b0b02cc50044ac5a84c69e25c61aa76",
+  "survey_url": "https://survey123.arcgis.com/share/8b0b02cc50044ac5a84c69e25c61aa76",
+  "web_sayfasi_url": "https://georehber.com/her-yerde-ataturk/",
+  "moderasyon": {
+    "app_id": "qU2WXbv3RWRlgBV9",
+    "portal": "https://www.arcgis.com",
+    "ham_url": "https://services-eu1.arcgis.com/uaOuNze8ggz2HsSW/arcgis/rest/services/survey123_fb7ab78879884719b151842dbe7d62ab/FeatureServer/0",
+    "anitlar_url": "https://services-eu1.arcgis.com/uaOuNze8ggz2HsSW/arcgis/rest/services/her_yerde_ataturk_anitlar/FeatureServer/0"
+  }
+}

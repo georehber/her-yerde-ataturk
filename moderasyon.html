@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Moderasyon · Her Yerde Atatürk</title>
+<meta name="theme-color" content="#003286">
+<link rel="icon" type="image/png" href="https://geodata.georehber.com/icons/logo.png">
+<!-- Bağlantıları baştan aç: telefonda her sunucu için el sıkışma süresi kazanılır -->
+<link rel="preconnect" href="https://js.arcgis.com">
+<link rel="preconnect" href="https://www.arcgis.com">
+<link rel="preconnect" href="https://services-eu1.arcgis.com">
+<link rel="preconnect" href="https://services.arcgisonline.com">
+<link rel="preconnect" href="https://static.arcgis.com">
+<link rel="preconnect" href="https://survey123.arcgis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="config.json" as="fetch" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="brand.css">
+<script>window.configSozu = fetch("config.json").then(r => r.json());</script>
+<script src="https://js.arcgis.com/4.32/"></script>
+<style>
+  :root {
+    --ana: var(--gr-ana); --ana-koyu: var(--gr-ana-koyu); --ana-zemin: var(--gr-ana-zemin);
+    --murekkep: var(--gr-metin); --ikincil: var(--gr-metin-soluk); --cizgi: var(--gr-kenarlik);
+    --kart: var(--gr-kart); --zemin: #f4f6f9; --kenar: 16px;
+    --red: #b42318; --red-zemin: #fee4e2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--zemin); color: var(--murekkep); font-family: var(--gr-font-govde);
+               -webkit-font-smoothing: antialiased; }
+  button, textarea { font: inherit; }
+  :focus-visible { outline: 3px solid var(--ana); outline-offset: 2px; }
+  header {
+    position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 10px;
+    padding: calc(10px + env(safe-area-inset-top)) var(--kenar) 10px; background: var(--kart);
+    border-bottom: 3px solid var(--ana);
+  }
+  header img { width: 28px; height: 34px; }
+  header h1 { flex: 1; margin: 0; font-family: var(--gr-font-baslik); font-size: 17px; font-weight: 700; color: var(--ana); }
+  header h1 span { display: block; font-family: var(--gr-font-govde); font-size: 11.5px; font-weight: 400; color: var(--ikincil); }
+  .kucuk-dugme { height: 34px; padding: 0 12px; border: 1px solid var(--cizgi); border-radius: 999px; background: var(--kart);
+                 color: var(--ana); font-size: 13px; font-weight: 600; cursor: pointer; }
+  main { max-width: 640px; margin: 0 auto; padding: var(--kenar); padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+
+  .bilgi { background: var(--kart); border: 1px solid var(--cizgi); border-radius: var(--gr-yaricap); padding: 22px;
+           box-shadow: var(--gr-golge-sm); text-align: center; }
+  .bilgi h2 { margin: 0 0 8px; font-family: var(--gr-font-baslik); font-size: 19px; color: var(--ana); }
+  .bilgi p { margin: 0 0 16px; color: var(--ikincil); font-size: 14px; line-height: 1.5; }
+  .ana-dugme { height: 46px; padding: 0 22px; border: 0; border-radius: 999px; background: var(--ana); color: #fff;
+               font-size: 15px; font-weight: 600; cursor: pointer; }
+
+  .sekmeler { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px; }
+  .sekme { padding: 8px 4px; border: 1px solid var(--cizgi); border-radius: 10px; background: var(--kart); cursor: pointer;
+           font-size: 12px; color: var(--ikincil); line-height: 1.2; }
+  .sekme b { display: block; font-size: 18px; color: var(--murekkep); }
+  .sekme[aria-selected="true"] { background: var(--ana); border-color: var(--ana); color: #e3efff; }
+  .sekme[aria-selected="true"] b { color: #fff; }
+
+  .kart { background: var(--kart); border: 1px solid var(--cizgi); border-radius: var(--gr-yaricap); overflow: hidden;
+          box-shadow: var(--gr-golge-sm); margin-bottom: 14px; transition: opacity .25s, transform .25s; }
+  .kart.gitti { opacity: 0; transform: translateX(30px); }
+  .foto { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #e8ebf0; }
+  .foto-yok { padding: 10px 14px 0; color: var(--ikincil); font-size: 12.5px; }
+  .foto[data-yukleniyor] { background: linear-gradient(90deg, #e8ebf0, #f3f5f8, #e8ebf0); background-size: 200% 100%;
+                           animation: parilti 1.2s linear infinite; }
+  @keyframes parilti { to { background-position: -200% 0; } }
+  .govde { padding: 14px; }
+  .rozetler { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .rozet { padding: 3px 10px; border-radius: 999px; background: var(--ana-zemin); color: var(--ana); font-size: 12px; font-weight: 600; }
+  .rozet.uyari { background: var(--gr-uyari-zemin); color: var(--gr-uyari); }
+  .kart h3 { margin: 0 0 6px; font-family: var(--gr-font-baslik); font-size: 17px; }
+  .satir { display: grid; grid-template-columns: 82px 1fr; gap: 8px; padding: 7px 0; border-top: 1px solid #f0f1f4; font-size: 13.5px; }
+  .satir dt { color: var(--ana); font-weight: 600; }
+  .satir dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .tekrar { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--gr-uyari-zemin); color: var(--gr-uyari);
+            font-size: 13px; line-height: 1.45; }
+  .harita-baglanti { display: inline-block; margin-top: 10px; color: var(--ana); font-size: 13px; font-weight: 600; }
+  textarea { width: 100%; min-height: 60px; margin-top: 12px; padding: 10px; border: 1px solid var(--cizgi); border-radius: 10px;
+             resize: vertical; font-size: 14px; }
+  .kararlar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .karar { min-height: 46px; padding: 6px; border-radius: 12px; font-size: 13.5px; font-weight: 600; cursor: pointer; line-height: 1.15; }
+  .karar.onay { background: var(--ana); color: #fff; border: 1px solid var(--ana); }
+  .karar.dogrulanmadi { background: var(--kart); color: var(--gr-uyari); border: 1px solid #e3b766; }
+  .karar.ret { background: var(--kart); color: var(--red); border: 1px solid #f2b8b3; }
+  .karar:disabled { opacity: .5; cursor: wait; }
+  .sil { display: block; margin: 14px auto 2px; padding: 6px 10px; border: 0; background: none; color: var(--red);
+         font-size: 12.5px; text-decoration: underline; cursor: pointer; }
+  .bos { text-align: center; color: var(--ikincil); padding: 40px 10px; font-size: 14px; }
+  #bildirim { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom)); transform: translate(-50%, 120px);
+              background: var(--murekkep); color: #fff; padding: 12px 18px; border-radius: 999px; font-size: 14px;
+              transition: transform .25s; z-index: 20; max-width: calc(100% - 32px); }
+  #bildirim.goster { transform: translate(-50%, 0); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <img src="https://geodata.georehber.com/icons/logo.png" alt="">
+  <h1>Moderasyon<span>Her Yerde Atatürk · katkı onayı</span></h1>
+  <button class="kucuk-dugme" id="cikis" type="button" hidden>Çıkış</button>
+</header>
+
+<main>
+  <section class="bilgi" id="giris-ekrani" hidden>
+    <h2>Giriş gerekli</h2>
+    <p>Bu sayfa yalnızca yetkili moderatörler içindir. Devam etmek için ArcGIS Online hesabınızla giriş yapın.</p>
+    <button class="ana-dugme" id="giris" type="button">Giriş yap</button>
+  </section>
+
+  <section class="bilgi" id="yetki-yok" hidden>
+    <h2>Erişim yok</h2>
+    <p id="yetki-metni">Bu hesabın katkılara erişim yetkisi yok.</p>
+    <button class="ana-dugme" id="baska-hesap" type="button">Başka hesapla giriş</button>
+  </section>
+
+  <section id="panel" hidden>
+    <div class="sekmeler" role="tablist">
+      <button class="sekme" role="tab" data-durum="beklemede" aria-selected="true"><b data-sayi="beklemede">–</b>Bekleyen</button>
+      <button class="sekme" role="tab" data-durum="onayli" aria-selected="false"><b data-sayi="onayli">–</b>Onaylı</button>
+      <button class="sekme" role="tab" data-durum="onayli_dogrulanmadi" aria-selected="false"><b data-sayi="onayli_dogrulanmadi">–</b>Doğrulanmadı</button>
+      <button class="sekme" role="tab" data-durum="reddedildi" aria-selected="false"><b data-sayi="reddedildi">–</b>Reddedilen</button>
+    </div>
+    <div id="liste" aria-live="polite"></div>
+  </section>
+</main>
+
+<div id="bildirim" role="status"></div>
+
+<template id="kart-sablonu">
+  <article class="kart">
+    <img class="foto" alt="Katkı fotoğrafı" loading="lazy">
+    <div class="foto-yok" hidden>Fotoğraf yok</div>
+    <div class="govde">
+      <div class="rozetler"><span class="rozet kategori"></span></div>
+      <h3 class="ad"></h3>
+      <dl>
+        <div class="satir"><dt>Açıklama</dt><dd class="aciklama"></dd></div>
+        <div class="satir kaynak-satir"><dt>Kaynak</dt><dd class="kaynak"></dd></div>
+        <div class="satir"><dt>Ekleyen</dt><dd class="ekleyen"></dd></div>
+        <div class="satir"><dt>Tarih</dt><dd class="tarih"></dd></div>
+      </dl>
+      <p class="tekrar" hidden></p>
+      <a class="harita-baglanti" target="_blank" rel="noopener">Konumu haritada gör</a>
+      <textarea class="not" placeholder="Moderatör notu (isteğe bağlı, yalnız siz görürsünüz)"></textarea>
+      <div class="kararlar">
+        <button class="karar onay" type="button" data-karar="onayli">Onayla</button>
+        <button class="karar dogrulanmadi" type="button" data-karar="onayli_dogrulanmadi">Doğrulanmadı</button>
+        <button class="karar ret" type="button" data-karar="reddedildi">Reddet</button>
+      </div>
+      <button class="sil" type="button">Kalıcı olarak sil</button>
+    </div>
+  </article>
+</template>
+
+<script>
+const KATEGORI = { anit: "Anıt, heykel, büst", mekan: "Kaldığı ya da ziyaret ettiği yer",
+                   adini_tasiyan: "Adını taşıyan yer", sanat: "Duvar resmi, rölyef, pano", anma: "Anma alanı" };
+const DURUM_ADI = { onayli: "Onaylandı", onayli_dogrulanmadi: "Doğrulanmadı olarak onaylandı", reddedildi: "Reddedildi",
+                    beklemede: "Beklemeye alındı" };
+const $ = s => document.querySelector(s);
+const tarih = ms => ms ? new Date(ms).toLocaleString("tr-TR", { dateStyle: "medium", timeStyle: "short" }) : "–";
+
+function bildir(metin) {
+  const b = $("#bildirim"); b.textContent = metin; b.classList.add("goster");
+  clearTimeout(bildir.t); bildir.t = setTimeout(() => b.classList.remove("goster"), 2600);
+}
+
+// Kartı doldurur. Ziyaretçi metinleri textContent ile yazılır (HTML olarak yorumlanmaz).
+function kartOlustur(k, kaydet, sil) {
+  const el = $("#kart-sablonu").content.firstElementChild.cloneNode(true);
+  const a = k.oz;
+  el.querySelector(".kategori").textContent = KATEGORI[a.kategori] || a.kategori || "Katkı";
+  el.querySelector(".ad").textContent = a.yer_adi || "(adsız)";
+  el.querySelector(".aciklama").textContent = a.aciklama || "–";
+  el.querySelector(".ekleyen").textContent = a.takma_ad || "–";
+  el.querySelector(".tarih").textContent = tarih(a.CreationDate);
+  if (a.kaynak) el.querySelector(".kaynak").textContent = a.kaynak; else el.querySelector(".kaynak-satir").remove();
+  if (a.durum && a.durum !== "beklemede") {
+    const r = document.createElement("span"); r.className = "rozet uyari"; r.textContent = DURUM_ADI[a.durum] || a.durum;
+    el.querySelector(".rozetler").append(r);
+  }
+  // Fotoğraf kart açıldıktan sonra arkadan gelir; yüklenemezse boş kutu bırakılmaz, tek satır not yazılır
+  const img = el.querySelector(".foto"), yok = el.querySelector(".foto-yok");
+  const fotoYok = metin => { img.remove(); yok.textContent = metin; yok.hidden = false; };
+  if (k.fotoYukle) {
+    img.dataset.yukleniyor = "";
+    k.fotoYukle().then(adres => { img.src = adres; delete img.dataset.yukleniyor; })
+                 .catch(() => fotoYok("Fotoğraf yüklenemedi."));
+  } else fotoYok("Fotoğraf yok.");
+  if (k.tekrar) { const t = el.querySelector(".tekrar"); t.hidden = false; t.textContent = k.tekrar; }
+  el.querySelector(".harita-baglanti").href = `https://www.google.com/maps?q=${k.enlem},${k.boylam}`;
+  el.querySelector(".not").value = a.moderator_notu || "";
+  el.querySelectorAll(".karar").forEach(d => {
+    if (d.dataset.karar === a.durum) d.hidden = true;  // zaten bu durumdaysa o düğme gizli
+    d.addEventListener("click", async () => {
+      el.querySelectorAll(".karar").forEach(x => x.disabled = true);
+      try {
+        await kaydet(a, d.dataset.karar, el.querySelector(".not").value.trim());
+        el.classList.add("gitti");
+        setTimeout(() => el.remove(), 260);
+        bildir(DURUM_ADI[d.dataset.karar]);
+      } catch (e) {
+        el.querySelectorAll(".karar").forEach(x => x.disabled = false);
+        bildir("Kaydedilemedi: " + (e.message || e));
+      }
+    });
+  });
+  // Silme kalıcıdır: kayıt ve fotoğrafı geri alınamaz. Normalde "Reddet" önerilir; silme test ve spam için.
+  el.querySelector(".sil").addEventListener("click", async () => {
+    const ad = a.yer_adi || "bu kayıt";
+    if (!confirm(`"${ad}" ve fotoğrafı kalıcı olarak silinecek. Bu işlem geri alınamaz.
+
+Uygun olmayan katkılar için "Reddet" yeterlidir. Yine de silinsin mi?`)) return;
+    el.querySelectorAll("button").forEach(x => x.disabled = true);
+    try {
+      await sil(a);
+      el.classList.add("gitti");
+      setTimeout(() => el.remove(), 260);
+      bildir("Kalıcı olarak silindi");
+    } catch (e) {
+      el.querySelectorAll("button").forEach(x => x.disabled = false);
+      bildir("Silinemedi: " + (e.message || e));
+    }
+  });
+  return el;
+}
+
+function sekmeleriKur(yukle) {
+  document.querySelectorAll(".sekme").forEach(s => s.addEventListener("click", () => {
+    document.querySelectorAll(".sekme").forEach(x => x.setAttribute("aria-selected", String(x === s)));
+    yukle(s.dataset.durum);
+  }));
+}
+
+function listele(kayitlar, kaydet, sil) {
+  const liste = $("#liste"); liste.replaceChildren();
+  if (!kayitlar.length) { liste.innerHTML = '<p class="bos">Bu listede kayıt yok.</p>'; return; }
+  kayitlar.forEach(k => liste.append(kartOlustur(k, kaydet, sil)));
+}
+
+// Giriş yapmadan görünümü denemek için örnek veri (?ornek=1). Gerçek kayıtlara dokunmaz.
+if (new URLSearchParams(location.search).has("ornek")) {
+  const ornek = [
+    { oz: { objectid: 1, yer_adi: "Cumhuriyet İlkokulu Atatürk büstü", kategori: "anit", aciklama: "Okul bahçesinde, 1981'de dikilmiş bronz büst.",
+            takma_ad: "Ayşe", durum: "beklemede", CreationDate: Date.now() - 3600e3 }, enlem: 39.92, boylam: 32.85,
+      tekrar: "OSM'de 18 m yakında bir anıt var: Atatürk Büstü (büst). Aynı anıtsa fotoğraflı ek kayıt olarak onaylayabilir ya da reddedebilirsiniz." },
+    { oz: { objectid: 2, yer_adi: "Atatürk'ün kaldığı ev", kategori: "mekan", aciklama: "1924 gezisinde iki gece kaldığı söyleniyor.",
+            kaynak: "", takma_ad: "", durum: "beklemede", CreationDate: Date.now() - 86400e3 }, enlem: 38.42, boylam: 27.14 },
+  ];
+  $("#panel").hidden = false;
+  document.querySelectorAll("[data-sayi]").forEach(b => b.textContent = b.dataset.sayi === "beklemede" ? "2" : "0");
+  const bekle = async () => { await new Promise(r => setTimeout(r, 300)); };
+  sekmeleriKur(d => listele(d === "beklemede" ? ornek : [], bekle, bekle));
+  listele(ornek, bekle, bekle);
+} else {
+  require(["esri/identity/OAuthInfo", "esri/identity/IdentityManager", "esri/portal/Portal",
+           "esri/layers/FeatureLayer", "esri/Graphic", "esri/request"],
+          (OAuthInfo, esriId, Portal, FeatureLayer, Graphic, esriRequest) => {
+    window.configSozu.then(async config => {
+      const m = config.moderasyon;
+      const paylasim = m.portal + "/sharing";
+      esriId.registerOAuthInfos([new OAuthInfo({ appId: m.app_id, portalUrl: m.portal, popup: false })]);
+      const girisEkrani = () => { $("#giris-ekrani").hidden = false; };
+      $("#giris").addEventListener("click", () => esriId.getCredential(paylasim));
+      $("#baska-hesap").addEventListener("click", () => { esriId.destroyCredentials(); esriId.getCredential(paylasim); });
+      $("#cikis").addEventListener("click", () => { esriId.destroyCredentials(); location.replace(location.pathname); });
+
+      let kimlik;
+      try { kimlik = await esriId.checkSignInStatus(paylasim); } catch { return girisEkrani(); }
+      $("#cikis").hidden = false;
+
+      const portal = new Portal({ url: m.portal, authMode: "immediate" });
+      await portal.load();
+      const ham = new FeatureLayer({ url: m.ham_url, outFields: ["*"] });
+      const anitlar = new FeatureLayer({ url: m.anitlar_url });
+      try { await ham.load(); } catch {
+        $("#yetki-metni").textContent = `${portal.user?.username || "Bu hesap"} katkılara erişemiyor. Katmanın sahibi hesapla giriş yapın.`;
+        $("#yetki-yok").hidden = false; return;
+      }
+      const oidAlan = ham.objectIdField;
+
+      async function sayilar() {
+        for (const d of ["beklemede", "onayli", "onayli_dogrulanmadi", "reddedildi"]) {
+          const n = await ham.queryFeatureCount({ where: `durum = '${d}'` });
+          document.querySelector(`[data-sayi="${d}"]`).textContent = n;
+        }
+      }
+
+      async function kaydet(oz, durum, not) {
+        const sonuc = await ham.applyEdits({ updateFeatures: [new Graphic({
+          attributes: { [oidAlan]: oz[oidAlan], durum, moderator_notu: not || null } })] });
+        const r = sonuc.updateFeatureResults[0];
+        if (r.error) throw new Error(r.error.message);
+        sayilar();
+      }
+
+      async function sil(oz) {
+        const sonuc = await ham.applyEdits({ deleteFeatures: [{ objectId: oz[oidAlan] }] });
+        const r = sonuc.deleteFeatureResults[0];
+        if (r.error) throw new Error(r.error.message);
+        sayilar();
+      }
+
+      async function yukle(durum) {
+        $("#liste").innerHTML = '<p class="bos">Yükleniyor...</p>';
+        const q = ham.createQuery();
+        q.where = `durum = '${durum}'`; q.outFields = ["*"]; q.returnGeometry = true;
+        q.outSpatialReference = { wkid: 4326 }; q.orderByFields = ["CreationDate DESC"]; q.num = 100;
+        const fs = (await ham.queryFeatures(q)).features;
+        const idler = fs.map(f => f.attributes[oidAlan]);
+        const ekler = idler.length ? await ham.queryAttachments({ objectIds: idler }) : {};
+        const kayitlar = await Promise.all(fs.map(async f => {
+          const oz = f.attributes, ek = (ekler[oz[oidAlan]] || [])[0];
+          let tekrar = null;
+          try {
+            const yakin = await anitlar.queryFeatures({ geometry: f.geometry, distance: 50, units: "meters",
+                                                         outFields: ["ad", "anit_turu"], returnGeometry: false });
+            if (yakin.features.length) {
+              const o = yakin.features[0].attributes;
+              tekrar = `OSM'de 50 m içinde bir anıt var: ${o.ad} (${o.anit_turu}). Aynı anıtsa fotoğraflı ek kayıt olarak onaylayabilir ya da reddedebilirsiniz.`;
+            }
+          } catch { /* OSM kontrolü yapılamazsa kart yine gösterilir */ }
+          // Ek adresine anahtar elle eklenmez (kütüphane de eklediği için adres bozuluyordu); esri/request
+          // girişi kendisi yönetir, fotoğraf blob olarak alınır
+          const fotoYukle = ek ? async () => URL.createObjectURL(
+            (await esriRequest(ek.url, { responseType: "blob" })).data) : null;
+          return { oz, fotoYukle,
+                   enlem: f.geometry.y.toFixed(6), boylam: f.geometry.x.toFixed(6), tekrar };
+        }));
+        listele(kayitlar, kaydet, sil);
+      }
+
+      $("#panel").hidden = false;
+      sekmeleriKur(yukle);
+      sayilar();
+      yukle("beklemede");
+    }).catch(e => { $("#liste").innerHTML = ""; bildir("Sayfa yüklenemedi: " + (e.message || e)); });
+  });
+}
+</script>
+</body>
+</html>
