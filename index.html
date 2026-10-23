@@ -617,15 +617,18 @@ require([
     return new KaroKatmani({
       urlTemplate: `${taban}{level}/{col}/{row}.png`, tileInfo,
       id: eski.id, title: eski.title, visible: eski.visible, opacity: eski.opacity,
-      minScale: eski.minScale, maxScale: eski.maxScale,
+      minScale: eski.minScale || YOGUNLUK_EN_UZAK, maxScale: eski.maxScale,
       copyright: "Cadde yoğunluğu: Her Yerde Atatürk, OpenStreetMap katkıcıları"
     });
   }
 
-  // Atatürk silüeti (proje sahibinin çizimi, kalemle taranmış): Karadeniz'den kuzeye uzanan, arka planda filigran
-  // gibi duran büyük bir görsel; alt kenarı Türkiye kıyısının üstünde kalır, veriye binmez. Yalnız uzaklaşınca
-  // görünür: 1:3 milyondan yakında yoktur, 1:9 milyona doğru belirginleşir.
-  const SILUET = { lat: [42.7, 51.9], lonMerkez: 32.0, enBoy: 654 / 759, tamOlcek: 9e6, sinirOlcek: 3e6, opaklik: 0.55 };
+  // Yoğunluk karoları en uzak z4'e kadar var; daha uzakta yoğunluk biter. Sınır net olsun diye yoğunluk
+  // z4 ölçeğinin 1,4 katında (≈ 1:51,8 milyon) kesin kapanır.
+  const YOGUNLUK_EN_UZAK = 591657527.591555 / 2 ** 4 * 1.4;
+  // Atatürk silüeti (proje sahibinin çizimi, kalemle taranmış): yoğunluk bittiği anda belirmeye başlar ve bütün
+  // dünya haritasını kaplar; belli bir bölgeye oturmaz. Uzaklaştıkça belirginleşir.
+  const SILUET = { lat: [-68, 81], lonMerkez: 15, enBoy: 654 / 759, sinirOlcek: YOGUNLUK_EN_UZAK,
+                   tamOlcek: YOGUNLUK_EN_UZAK * 1.8, opaklik: 0.42 };
   function siluetKatmani() {
     const [x0, y0] = wmu.lngLatToXY(SILUET.lonMerkez, SILUET.lat[0]);
     const [, y1] = wmu.lngLatToXY(SILUET.lonMerkez, SILUET.lat[1]);
